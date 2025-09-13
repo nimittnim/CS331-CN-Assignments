@@ -22,16 +22,22 @@ Socket and scapy python packages.
 ```
 git clone https://github.com/nimittnim/CS331-CN-Assignments
 ```
-**Step 1.** Enter the "1. DNS" directory.
+**Step 1.** Enter the "Task1" directory.
 
 ```
-cd ./A1/"1. DNS"
+cd ./A1/"Task1"
 ```
 
-**Step 2.** Run the run.sh file.
+**Step 2.** Run the run.sh/run.bat file.
+For Linux/Mac ->
 ```
 chmod +x run.sh
 ./run.sh
+```
+
+For Windows ->
+```
+run.bat
 ```
 
 **Output:**\
