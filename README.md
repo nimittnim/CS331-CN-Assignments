@@ -8,7 +8,7 @@ Team Members:
 | Name             | Roll No.   |
 |------------------|------------|
 | Nimitt           | 22110169   |
-| Tapananshu Manoj | 22110270   |
+| Tapananshu       | 22110270   |
 
 ## Assignment 1 Instructions
 Access the Assignment 1 in ./A1
