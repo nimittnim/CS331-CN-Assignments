@@ -27,6 +27,7 @@ git clone https://github.com/nimittnim/CS331-CN-Assignments
 ```
 cd ./A1/"Task1"
 ```
+Save the packet capture file x.pcap here and update it in client.py `PCAP_FILE=x.pcap`.
 
 **Step 2.** Run the run.sh/run.bat file.
 For Linux/Mac ->
@@ -44,7 +45,12 @@ run.bat
 **run.sh** file will run **client.py** and **server.py**. The DNS resolution report will be printed on console and logged in **client_ans.txt** (Server response recieved by client) and **server_response.txt** (Server response).
 
 **Remark:**\
-1 For sending local DNS packets (mDNS), set `LOCAL = TRUE` in client.py. \
-2 Make sure no process is using the `PORT` in client.py and server.py.
+1 Make sure no process is using the `PORT` in client.py and server.py. \
+2 For sending local DNS packets (mDNS), set `LOCAL = TRUE` in client.py. \
+3 For different machines update the server port and address in client.py.
+
 
 ### Task 2: Traceroute
+*** Instructions ***
+1 Find the packet capture file for executions in ./A1/Task2 \
+2 For answers and execution refer to ./A1/report.pdf
