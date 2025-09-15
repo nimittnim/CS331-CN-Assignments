@@ -1,9 +1,9 @@
-Custom Header Value | Domain Name       | Resolved IP Address
+Custom Header Value | Domain Name  | Resolved IP Address
 -------------------------------------------------------
-17012200            | apple.com.        | 192.168.1.6
-17013401            | facebook.com.     | 192.168.1.7
-17015302            | amazon.com.       | 192.168.1.8
-17021403            | twitter.com.      | 192.168.1.9
-17022704            | wikipedia.org.    | 192.168.1.10
-17024005            | stackoverflow.com.| 192.168.1.6
+13000600            | twitter.com. | 192.168.1.6
+13002601            | example.com. | 192.168.1.7
+13003302            | netflix.com. | 192.168.1.8
+13004803            | linkedin.com.| 192.168.1.9
+13010104            | reddit.com.  | 192.168.1.10
+13011805            | openai.com.  | 192.168.1.6
 -------------------------------------------------------

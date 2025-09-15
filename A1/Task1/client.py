@@ -23,7 +23,7 @@ import socket, time
 # Globals
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 23
-PCAP_FILE = "5.pcap"
+PCAP_FILE = "9.pcap"
 LOCAL = False
 OUTPUT_FILE = "client_ans.txt"
 
