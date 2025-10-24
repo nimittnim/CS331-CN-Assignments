@@ -1,3 +1,11 @@
+```
+NAT is by default DOWN. To turn it UP follow these commands:
+
+$ sudo dhclient eth1
+
+```
+
+
 *** Ping: testing ping reachability
 dns -> h1 h2 h3 h4 nat0 
 h1 -> dns h2 h3 h4 nat0 
