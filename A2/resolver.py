@@ -58,7 +58,7 @@ def cache_get(qname, qtype_str):
     if not ENABLE_CACHE:
         return None, "MISS"
     
-    with cache_lock:  # <-- ADDED thread-safety
+    with cache_lock:  
         if key in cache:
             entry = cache[key]
             if time.time() < entry.expiry:
@@ -224,13 +224,14 @@ def iterative_resolve(qname, qtype_str):
                     # Note: We pass the string representation of the name.
                     ns_answer_rrsets, ns_success, ns_trace, _, _ = iterative_resolve(ns_name_str, 'A')
                     
-                    trace.append({"step": "Sub-Resolve NS", "name": ns_name_str, "success": ns_success})
+                    trace = trace + ns_trace
 
                     if ns_success and ns_answer_rrsets:
                         for rrset in ns_answer_rrsets:
                             if rrset.rdtype == rdatatype.A:
                                 for item in rrset:
                                     derived_ips.append(item.to_text())
+                        break
                 
                 if derived_ips:
                     servers_to_try = list(set(derived_ips)) + servers_to_try
