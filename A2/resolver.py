@@ -30,10 +30,10 @@ ROOT_SERVERS = [
     "202.12.27.33"    # m
 ]
 
-LOGFILE = "resolver_log.jsonl"
-ENABLE_CACHE = True
+LOGFILE = "resolver_log_D.jsonl"
+ENABLE_CACHE = False
 PORT = 53534
-MAX_WORKERS = 100  # <-- ADDED for thread pool
+MAX_WORKERS = 100  
 
 # simple cache entry
 CacheEntry = namedtuple("CacheEntry", ["answer_rrsets", "expiry"])
@@ -180,8 +180,6 @@ def iterative_resolve(qname, qtype_str):
             }
             trace.append(rec)
 
-            # --- START CACHE FIX (Problem 2) ---
-            # Cache all useful records from referral
             if auth:
                 for rrset in auth:
                     if rrset.rdtype == rdatatype.NS:
@@ -191,7 +189,6 @@ def iterative_resolve(qname, qtype_str):
                     # Cache glue records
                     if rrset.rdtype == rdatatype.A or rrset.rdtype == rdatatype.AAAA:
                         cache_set(rrset.name, rdatatype.to_text(rrset.rdtype), [rrset], rrset.ttl)
-            # --- END CACHE FIX ---
 
             # Pick IPs from additional (glue) as next servers
             next_servers = []
@@ -220,7 +217,6 @@ def iterative_resolve(qname, qtype_str):
                             except Exception:
                                 pass
                 
-                # --- START CRITICAL "NO GLUE" FIX (Problem 1) ---
                 derived_ips = []
                 for ns_name_str in ns_names:
                     # Resolve the NS name's IP address. This is the crucial fix.
@@ -245,7 +241,6 @@ def iterative_resolve(qname, qtype_str):
                     return None, False, trace, total_time, "NOREFERRAL"
                 # --- END CRITICAL "NO GLUE" FIX ---
 
-# def recursive_resolve(qname, quert_type_str):
 
 
 def handle_query(data, addr, sock):
@@ -268,9 +263,7 @@ def handle_query(data, addr, sock):
     answer_rrsets, success, trace, total_time, disposition = iterative_resolve(qname, qtype_str)
     
     servers_contacted = [t.get("server_ip") for t in trace if "server_ip" in t]
-    
-    # --- MINOR FIX (Logging) ---
-    # Cleaner cache status logging
+
     cache_status = "HIT" if trace and trace[0].get("cache_status") == "HIT" else "MISS"
 
     record = {
@@ -301,11 +294,9 @@ def handle_query(data, addr, sock):
 
 
 def udp_server(bind_ip="0.0.0.0", bind_port=PORT):
-    
-    # --- START SCALABILITY FIX (Problem 3) ---
+
     # Use a fixed thread pool instead of thread-per-request
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS)
-    # --- END SCALABILITY FIX ---
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind((bind_ip, bind_port))
