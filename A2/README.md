@@ -1,4 +1,5 @@
 ## Instructions
+`report.pdf` in this directory is the report for A2. 
 ### Part B
 Run `topology.py` with `DNSRESOLVER = DEFAULT`. Resolution Statistics with be printed.
 ```
