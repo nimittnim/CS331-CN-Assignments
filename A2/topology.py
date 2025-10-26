@@ -11,6 +11,8 @@ import re
 import time
 import os
 
+DNSRESOLVER = "CUSTOM" #  "CUSTOM or DEFAULT"
+
 class AssignmentTopo(Topo):
     def build(self):
         h1 = self.addHost('h1', ip='10.0.0.1')
@@ -36,7 +38,7 @@ class AssignmentTopo(Topo):
 
 
 def dns_analysis(net, host_domain_mapping):    
-    for host_name, domain_file in host_domain_mapping.items():        
+    for host_name, domain_file in host_domain_mapping.items():
         host = net.get(host_name)
         domains = []
         with open(f"{domain_file}.txt","r") as f:
@@ -57,8 +59,11 @@ def dns_analysis(net, host_domain_mapping):
             domain = domain.strip()
             if not domain:
                 continue
-
-            output = host.cmd(f'dig {domain} @8.8.8.8')
+            
+            if (DNSRESOLVER == "DEFAULT"):
+                output = host.cmd(f'dig {domain} @8.8.8.8')
+            else:
+                output = host.cmd(f'dig {domain} @10.0.0.5 -p 53534')
             #print("---> Output is ", output)
             status_match = re.search(r"status: (\w+)", output)
             
@@ -105,6 +110,20 @@ if __name__ == '__main__':
     net.start()
     net.pingAll()
     #CLI(net)
+    
+    if (DNSRESOLVER == "CUSTOM"):
+        dns_host = net.get('dns')
+
+        # Start your resolver
+        print("Starting custom DNS resolver on dns node...")
+        dns_host.cmd('python3 /home/nimitt/CS331-CN-Assignments/A2/resolver.py &')
+        time.sleep(3)
+
+        # Update resolv.conf for all other hosts
+        for h in ['h1', 'h2', 'h3', 'h4']:
+            host = net.get(h)
+            host.cmd('echo "nameserver 10.0.0.5" > /etc/resolv.conf')
+
     dns_analysis(net, domain_files)
     print(" Stopping network...")
     net.stop()
