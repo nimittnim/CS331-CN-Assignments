@@ -63,7 +63,7 @@ def dns_analysis(net, host_domain_mapping):
             if (DNSRESOLVER == "DEFAULT"):
                 output = host.cmd(f'dig {domain} @8.8.8.8')
             else:
-                output = host.cmd(f'dig {domain} @10.0.0.5 -p 53534')
+                output = host.cmd(f'dig {domain} @10.0.0.5 -p 53534 +tries=1 +retry=0')
             #print("---> Output is ", output)
             status_match = re.search(r"status: (\w+)", output)
             
