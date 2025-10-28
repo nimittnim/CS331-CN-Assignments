@@ -11,7 +11,7 @@ import re
 import time
 import os
 
-DNSRESOLVER = "CUSTOM" #  "CUSTOM or DEFAULT"
+DNSRESOLVER = "DEFAULT" #  "CUSTOM or DEFAULT"
 
 class AssignmentTopo(Topo):
     def build(self):
@@ -61,7 +61,7 @@ def dns_analysis(net, host_domain_mapping):
                 continue
             
             if (DNSRESOLVER == "DEFAULT"):
-                output = host.cmd(f'dig {domain} @8.8.8.8')
+                output = host.cmd(f'dig {domain} @10.0.0.6')
             else:
                 output = host.cmd(f'dig {domain} @10.0.0.5 -p 53534 +tries=1 +retry=0')
             #print("---> Output is ", output)
@@ -93,6 +93,9 @@ def dns_analysis(net, host_domain_mapping):
         print(f"    - Average Throughput:    {avg_throughput:.2f} queries/sec")
 
 
+import subprocess
+import time
+
 if __name__ == '__main__':
     domain_files = {
         'h1': 'PCAP_1_H1_domains',
@@ -109,21 +112,35 @@ if __name__ == '__main__':
     print("Starting network...")
     net.start()
     net.pingAll()
-    #CLI(net)
-    
-    if (DNSRESOLVER == "CUSTOM"):
+
+    proxy_process = None
+    if (DNSRESOLVER == "DEFAULT"):
+        print("Starting socat proxy for default resolver...")
+        command = [
+            'socat',
+            'UDP-LISTEN:53,fork,bind=10.0.0.6', 
+            'UDP:10.0.2.3:53'  
+        ]
+        
+        proxy_process = subprocess.Popen(command)
+        print(f"Started socat proxy with PID: {proxy_process.pid}")
+        time.sleep(1) 
+
+    elif (DNSRESOLVER == "CUSTOM"):
         dns_host = net.get('dns')
-
-        # Start your resolver
         print("Starting custom DNS resolver on dns node...")
-        dns_host.cmd('python3 /home/nimitt/CS331-CN-Assignments/A2/resolver.py &')
+        dns_host.cmd('python3 /home/nimitt/CS3L31-CN-Assignments/A2/resolver.py &')
         time.sleep(3)
-
-        # Update resolv.conf for all other hosts
         for h in ['h1', 'h2', 'h3', 'h4']:
             host = net.get(h)
             host.cmd('echo "nameserver 10.0.0.5" > /etc/resolv.conf')
 
+    CLI(net)
     dns_analysis(net, domain_files)
+    
+    if proxy_process:
+        print(f"\nStopping socat proxy (PID: {proxy_process.pid})...")
+        proxy_process.terminate()
+
     print(" Stopping network...")
     net.stop()
