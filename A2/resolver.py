@@ -10,7 +10,7 @@ import dns.name
 import dns.rdatatype
 import dns.exception
 import random  
-import concurrent.futures  
+import concurrent.futures
 
 # pip install dnspython
 # Root servers list (hardcoded, IPv4)
@@ -30,10 +30,12 @@ ROOT_SERVERS = [
     "202.12.27.33"    # m
 ]
 
-LOGFILE = "resolver_log_D.jsonl"
+LOGFILE = "resolver_log_recursive.jsonl"
 ENABLE_CACHE = False
 PORT = 53534
 MAX_WORKERS = 100  
+# MODE = "ITERATIVE" # Recursive or Iterative
+MODE = "RECURSIVE"
 
 # simple cache entry
 CacheEntry = namedtuple("CacheEntry", ["answer_rrsets", "expiry"])
@@ -82,27 +84,44 @@ def log_record(record: dict):
     logger.info(json.dumps(record))
 
 
-def query_server(qname, qtype, server_ip, timeout=2.0):
+def query_server(qname, qtype, server_ip, timeout=2.0, recursion_desired=False):
     """
-    Send a DNS query (non-recursive) to server_ip and return (response, rtt)
+    Send a DNS query to server_ip with optional recursion.
+    Returns (response, rtt).
     """
-    # qtype is a string 'A', 'NS', etc.
-    q = message.make_query(qname, qtype, want_dnssec=False)
-    q.flags &= ~dns.flags.RD  # clear recursion desired -> iterative request
-    wire = q.to_wire()
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.settimeout(timeout)
-    start = time.time()
     try:
+        # build query
+        q = message.make_query(qname, qtype, want_dnssec=False)
+        
+        # set or clear recursion desired bit (RD)
+        if recursion_desired:
+            q.flags |= dns.flags.RD
+        else:
+            q.flags &= ~dns.flags.RD
+
+        # serialize to wire
+        wire = q.to_wire()
+
+        # open UDP socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(timeout)
+        start = time.time()
+        
+        # send query
         s.sendto(wire, (server_ip, 53))
         data, _ = s.recvfrom(4096)
-        rtt = (time.time() - start)
+        rtt = time.time() - start
+        
+        # parse response
         resp = message.from_wire(data)
         return resp, rtt
+
     except Exception as e:
+        # you can log e if needed
         return None, None
     finally:
         s.close()
+
 
 
 def iterative_resolve(qname, qtype_str):
@@ -243,6 +262,69 @@ def iterative_resolve(qname, qtype_str):
                 # --- END CRITICAL "NO GLUE" FIX ---
 
 
+def recursive_resolve(qname, qtype_str):
+    # return iterative_resolve(qname,qtype_str)
+    """
+    Hybrid resolver that starts from root servers.
+    - Sends RD=1 (recursion desired)
+    - If recursion available (RA=1), accepts full answer
+    - If not, uses referral info (NS + glue) to go down hierarchy iteratively
+    """
+    
+    cached_rrsets, status = cache_get(qname, qtype_str)
+    if cached_rrsets:
+        return cached_rrsets, True, [{"cache_status": "HIT"}], 0.0, "CACHE"
+
+    trace = []
+    total_start = time.time()
+    servers_to_try = list(ROOT_SERVERS)
+    queried_servers = set()
+   
+    while True:
+        
+        if not servers_to_try:
+            total_time = time.time() - total_start
+            return None, False, trace, total_time, "FAILED"
+
+        server = servers_to_try.pop(0)
+        if server in queried_servers:
+            continue
+        queried_servers.add(server)
+
+        resp, rtt = query_server(qname, qtype_str, server, recursion_desired=True)
+        rec = {
+            "server_ip": server,
+            "rtt": rtt if rtt else -1,
+            "step": "Query (RD=1)",
+            "response": None,
+            "recursion_available": False
+        }
+
+        if resp is None:
+            print("xyz1")
+            rec["response"] = "NO RESPONSE"
+            trace.append(rec)
+            continue
+
+        # check RA (recursion available) bit
+        rec["recursion_available"] = bool(resp.flags & dns.flags.RA)
+
+        # if recursion available and answer present, done!
+        if resp.answer and rec["recursion_available"]:
+            print("xyz2")
+            ans_summary = [str(rr) for rr in resp.answer]
+            rec["response"] = "ANSWER (Recursive): " + ";".join(ans_summary)
+            trace.append(rec)
+
+            min_ttl = min((rrset.ttl for rrset in resp.answer), default=30)
+            cache_set(qname, qtype_str, resp.answer, min_ttl)
+            total_time = time.time() - total_start
+            return resp.answer, True, trace, total_time, "RECURSIVE"
+
+        # recursion not available, fallback to referral handling (iterative part)
+        if not resp.answer:
+            return iterative_resolve(qname,qtype_str)
+
 
 def handle_query(data, addr, sock):
     try:
@@ -260,8 +342,10 @@ def handle_query(data, addr, sock):
         "query_name": str(qname),
         "query_type": qtype_str
     }
-
-    answer_rrsets, success, trace, total_time, disposition = iterative_resolve(qname, qtype_str)
+    if (MODE == "ITERATIVE"):
+        answer_rrsets, success, trace, total_time, disposition = iterative_resolve(qname, qtype_str)
+    elif (MODE == "RECURSIVE"):
+        answer_rrsets, success, trace, total_time, disposition = recursive_resolve(qname, qtype_str)
     
     servers_contacted = [t.get("server_ip") for t in trace if "server_ip" in t]
 
