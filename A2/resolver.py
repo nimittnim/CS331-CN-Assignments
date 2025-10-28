@@ -34,8 +34,8 @@ LOGFILE = "resolver_log_recursive.jsonl"
 ENABLE_CACHE = False
 PORT = 53534
 MAX_WORKERS = 100  
-# MODE = "ITERATIVE" # Recursive or Iterative
-MODE = "RECURSIVE"
+MODE = "ITERATIVE" # Recursive or Iterative
+#MODE = "RECURSIVE" (part E)
 
 # simple cache entry
 CacheEntry = namedtuple("CacheEntry", ["answer_rrsets", "expiry"])
